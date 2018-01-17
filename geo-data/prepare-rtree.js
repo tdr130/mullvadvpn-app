@@ -1,26 +1,32 @@
 //
 // Script that generates r-trees for countries and cities.
-// run with npx babel-node prepare-rtree.js
+// run with `yarn babel-node geo-data/prepare-rtree.js`
 //
 
 import fs from 'fs';
 import path from 'path';
-import geojsonRbush from 'geojson-rbush';
+import rbush from 'rbush';
 
-import countriesJSON from './countries.geo.json';
-import citiesJSON from './cities.geo.json';
+const input = ['countries', 'cities'];
 
-const outputPaths = {
-  countries: path.join(__dirname, 'countries.rbush.json'),
-  cities: path.join(__dirname, 'cities.rbush.json')
-};
+for(const name of input) {
+  const source = path.join(__dirname, `${name}.geo.json`);
+  const destination = path.join(__dirname, `${name}.rbush.json`);
+  const data = fs.readFileSync(source);
+  const collection = JSON.parse(data);
+  const treeData = collection.features.map((feat) => {
+    const { coordinates } = feat.geometry;
+    return { ...feat,
+      minX: coordinates[0],
+      minY: coordinates[1],
+      maxX: coordinates[0],
+      maxY: coordinates[1],
+    };
+  });
 
-const countryRbush = geojsonRbush();
-countriesJSON.features.map(feat => countryRbush.insert(feat));
-fs.writeFileSync(outputPaths.countries, JSON.stringify(countryRbush.toJSON()));
-console.log(`Saved an rbush: ${outputPaths.countries}`);
+  const tree = rbush();
+  tree.load(treeData);
+  fs.writeFileSync(destination, JSON.stringify(tree.toJSON()));
 
-const cityRbush = geojsonRbush();
-citiesJSON.features.map(feat => cityRbush.insert(feat));
-fs.writeFileSync(outputPaths.cities, JSON.stringify(cityRbush.toJSON()));
-console.log(`Saved an rbush: ${outputPaths.cities}`);
+  console.log(`Saved a rbush tree at ${destination}`);
+}
