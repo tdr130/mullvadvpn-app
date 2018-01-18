@@ -17,6 +17,7 @@ import type { Coordinate2d } from '../types';
 
 export type MapProps = {
   center: Coordinate2d, // longitude, latitude
+  offset: [number, number], // [x, y] in points
   zoomIn: boolean,
   markerImagePath: string,
 };
@@ -45,14 +46,21 @@ export default class Map extends Component {
     const zoom = this.props.zoomIn ? 2 : 1;
 
     const projectionConfig = {
-      scale: 3000,
-      // doesn't work properly for some reason
-      // see: https://github.com/zcreativelabs/react-simple-maps/issues/23
-      // yOffset: -62 / zoom
+      scale: 3000
     };
 
     const { bounds } = this.state;
-    const projection = this.getProjection(bounds.width, bounds.height, projectionConfig);
+    const projection = this._getProjection(bounds.width, bounds.height, projectionConfig);
+    const zoomCenter = this._getZoomCenter(this.props.center, this.props.offset, projection, zoom);
+    const bbox = this._getBBox(zoomCenter, this.state.bounds, projection, zoom);
+
+    const query = {
+      minX: bbox[0], maxX: bbox[2],
+      minY: bbox[3], maxY: bbox[1]
+    };
+
+    const visibleCountries = countryTree.search(query);
+    const visibleCities = cityTree.search(query);
 
     const mapStyle = {
       width: '100%',
@@ -77,23 +85,6 @@ export default class Map extends Component {
         <image x="-30" y="-30" href={ this.props.markerImagePath } />
       </Marker>
     );
-
-    const bbox = this._getBBox(
-      this.props.center,
-      this.state.bounds,
-      projection,
-      zoom
-    );
-
-    const query = {
-      minX: bbox[0],
-      maxX: bbox[2],
-      minY: bbox[3],
-      maxY: bbox[1]
-    };
-
-    const visibleCountries = countryTree.search(query);
-    const visibleCities = cityTree.search(query);
 
     const countryMarkers = visibleCountries.map((item) => (
       <Marker key={ `country-${item.id}` } marker={{ coordinates: item.geometry.coordinates }}>
@@ -120,21 +111,26 @@ export default class Map extends Component {
           width={ bounds.width }
           height={ bounds.height }
           style={ mapStyle }
-          projection={ this.getProjection }
+          projection={ this._getProjection }
           projectionConfig={ projectionConfig }>
-          <ZoomableGroup center={ this.props.center } zoom={ zoom } disablePanning={ true }>
+          <ZoomableGroup
+            center={ zoomCenter }
+            zoom={ zoom }
+            disablePanning={ true }
+            style={{
+              transition: 'transform 1s ease-in-out'
+            }}>
             <Geographies geography={ geographyData }>
               {(geographies, projection) => geographies.map(geography => (
                 <Geography
                   key={ geography.id }
-                  cacheId={ geography.id }
                   geography={ geography }
                   projection={ projection }
                   style={ geographyStyle } />
               ))}
             </Geographies>
             <Markers>
-              { [].concat(countryMarkers, cityMarkers, userMarker) }
+              { [...countryMarkers, ...cityMarkers, userMarker] }
             </Markers>
           </ZoomableGroup>
         </ComposableMap>
@@ -142,7 +138,7 @@ export default class Map extends Component {
     );
   }
 
-  getProjection(width: number, height: number, config: {
+  _getProjection(width: number, height: number, config: {
     scale?: number,
     xOffset?: number,
     yOffset?: number,
@@ -160,6 +156,19 @@ export default class Map extends Component {
       .translate([ xOffset + width / 2, yOffset + height / 2 ])
       .rotate(rotation)
       .precision(precision);
+  }
+
+  _getZoomCenter(
+    center: [number, number],
+    offset: [number, number],
+    projection: ([number, number]) => [number, number],
+    zoom: number
+  ) {
+    const pos = projection(center);
+    return projection.invert([
+      pos[0] + offset[0] / zoom,
+      pos[1] + offset[1] / zoom
+    ]);
   }
 
   _getBBox(
