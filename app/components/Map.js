@@ -65,7 +65,7 @@ export default class Map extends Component {
     const mapStyle = {
       width: '100%',
       height: '100%',
-      backgroundColor: '#191A1A'
+      backgroundColor: '#191A1A',
     };
 
     const defaultGeographyStyle = {
@@ -77,17 +77,35 @@ export default class Map extends Component {
     const geographyStyle = {
       default: defaultGeographyStyle,
       hover: defaultGeographyStyle,
-      pressed: defaultGeographyStyle
+      pressed: defaultGeographyStyle,
+    };
+
+    const zoomStyle = {
+      transition: 'transform 1s ease-in-out'
+    };
+
+    const defaultMarkerStyle = {
+      transition: 'transform 1s ease-in-out',
+    };
+
+    const markerStyle = {
+      default: defaultMarkerStyle,
+      hover: defaultMarkerStyle,
+      pressed: defaultMarkerStyle
     };
 
     const userMarker = (
-      <Marker key={ 'pin-marker' } marker={{ coordinates: this.props.center }}>
+      <Marker key={ 'pin-marker' }
+        marker={{ coordinates: this.props.center }}
+        style={ markerStyle }>
         <image x="-30" y="-30" href={ this.props.markerImagePath } />
       </Marker>
     );
 
     const countryMarkers = visibleCountries.map((item) => (
-      <Marker key={ `country-${item.id}` } marker={{ coordinates: item.geometry.coordinates }}>
+      <Marker key={ `country-${item.id}` }
+        marker={{ coordinates: item.geometry.coordinates }}
+        style={ markerStyle }>
         <text fill="rgba(255,255,255,.4)" fontSize="22" textAnchor="middle">
           { item.properties.name }
         </text>
@@ -96,7 +114,9 @@ export default class Map extends Component {
 
     const cityMarkers = visibleCities.map((item) => {
       return (
-        <Marker key={ `city-${item.id}` } marker={{ coordinates: item.geometry.coordinates }}>
+        <Marker key={ `city-${item.id}` }
+          marker={{ coordinates: item.geometry.coordinates }}
+          style={ markerStyle }>
           <circle r="2" fill="rgba(255,255,255,.8)" />
           <text x="0" y="-10" fill="rgba(255,255,255,.8)" fontSize="14" textAnchor="middle">
             { item.properties.name }
@@ -117,9 +137,7 @@ export default class Map extends Component {
             center={ zoomCenter }
             zoom={ zoom }
             disablePanning={ true }
-            style={{
-              transition: 'transform 1s ease-in-out'
-            }}>
+            style={ zoomStyle }>
             <Geographies geography={ geographyData }>
               {(geographies, projection) => geographies.map(geography => (
                 <Geography
