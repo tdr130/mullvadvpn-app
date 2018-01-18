@@ -34,6 +34,7 @@ export default class Connect extends Component {
   };
 
   _copyTimer: ?number;
+  _previousCenter: ?[number, number];
 
   componentWillUnmount() {
     if(this._copyTimer) {
@@ -133,8 +134,17 @@ export default class Connect extends Component {
     case 'disconnected': isDisconnected = true; break;
     }
 
+    const { longitude, latitude } = this.props.connection;
+
+    // temporarily use the current center if the next center is not known yet.
+    const center = typeof(longitude) === 'number' && typeof(latitude) === 'number' ?
+      [longitude, latitude] :
+      (this._previousCenter ? this._previousCenter : [0, 0]);
+    this._previousCenter = center;
+
     const map = (
-      <Map center={ isDisconnected ? [14.5058, 46.0569] : [-3.703790, 40.416775] }
+      <Map center={ center }
+        offset={ [0, 123] }
         zoomIn={ isConnected }
         markerImagePath={ isConnected
           ? './assets/images/location-marker-secure.svg'
