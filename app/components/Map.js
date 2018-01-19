@@ -22,17 +22,23 @@ export type MapProps = {
   markerImagePath: string,
 };
 
+type MapState = {
+  bounds: {
+    width: number,
+    height: number,
+  },
+};
+
 export default class Map extends Component {
   props: MapProps;
-
-  state = {
+  state: MapState = {
     bounds: {
       width: 320,
       height: 494
     }
   };
 
-  _container: ?HTMLElement;
+  _containerElement: ?HTMLElement;
 
   componentDidMount() {
     this._updateBounds();
@@ -40,6 +46,17 @@ export default class Map extends Component {
 
   componentDidUpdate() {
     this._updateBounds();
+  }
+
+  shouldComponentUpdate(nextProps: MapProps, nextState: MapState) {
+    const { props: oldProps, state: oldState } = this;
+    return (
+      oldProps.center.some((v, i) => nextProps.center[i] !== v) ||
+      oldProps.offset.some((v, i) => nextProps.offset[i] !== v) ||
+      oldProps.zoomIn !== nextProps.zoomIn ||
+      oldProps.markerImagePath !== nextProps.markerImagePath ||
+      ['width', 'height'].some((key) => oldState.bounds[key] !== nextState.bounds[key])
+    );
   }
 
   render() {
@@ -126,7 +143,7 @@ export default class Map extends Component {
     });
 
     return (
-      <div ref={ (ref) => this._container = ref } style={{ width: '100%', height: '100%' }}>
+      <div ref={ (ref) => this._containerElement = ref } style={{ width: '100%', height: '100%' }}>
         <ComposableMap
           width={ bounds.width }
           height={ bounds.height }
@@ -206,14 +223,16 @@ export default class Map extends Component {
   }
 
   _updateBounds() {
-    if(!this._container) { return; }
-
-    const width = this._container.clientWidth;
-    const height = this._container.clientHeight;
-    if(this.state.bounds.width !== width || this.state.bounds.height !== height) {
-      this.setState({
-        bounds: { width, height }
-      });
+    const containerElement = this._containerElement;
+    if(!containerElement) {
+      throw new Error('containerElement cannot be null');
     }
+
+    this.setState({
+      bounds: {
+        width: containerElement.clientWidth,
+        height: containerElement.clientHeight
+      }
+    });
   }
 }
